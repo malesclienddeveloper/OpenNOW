@@ -329,6 +329,7 @@ internal fun AppSettings.normalizedForAndroid(): AppSettings {
             streamDefaults.recordingSharpeningAmount,
         ),
     )
+    val normalizedPhysicalInputProfiles = physicalInputProfiles.normalizedPhysicalInputProfiles()
     val normalizedCatalogSortId = catalogSortId.trim().ifBlank { DEFAULT_CATALOG_SORT_ID }
     val migratedCatalogSortId = if (
         catalogSortDefaultVersion < CATALOG_SORT_DEFAULT_VERSION &&
@@ -358,6 +359,9 @@ internal fun AppSettings.normalizedForAndroid(): AppSettings {
         streamStatsCustomX = streamStatsCustomX?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
         streamStatsCustomY = streamStatsCustomY?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
         physicalInput = physicalInput.normalized(),
+        physicalInputProfiles = normalizedPhysicalInputProfiles,
+        activePhysicalInputProfileId = activePhysicalInputProfileId
+            ?.takeIf { id -> normalizedPhysicalInputProfiles.any { it.id == id } },
         touchControlPresets = touchControlPresets.take(MAX_TOUCH_PRESETS)
             .distinctBy { it.id }
             .map {

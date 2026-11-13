@@ -1276,12 +1276,14 @@ private fun SettingsContent(
                 }
                 SettingSwitch(stringResource(R.string.settings_clipboard_paste), settings.clipboardPaste) { enabled -> viewModel.updateSettings(settings.copy(clipboardPaste = enabled)) }
             }
-    CategorySettingsSection(selectedCategory, SettingsCategory.Input, searchQuery, stringResource(R.string.settings_section_physical_input), "input", "physical", "bluetooth", "controller", "gamepad", "keyboard", "dead zone", "swap", "wasd", "arrows") {
+    CategorySettingsSection(selectedCategory, SettingsCategory.Input, searchQuery, stringResource(R.string.settings_section_physical_input), "input", "physical", "bluetooth", "controller", "gamepad", "keyboard", "dead zone", "swap", "wasd", "arrows", "profile", "profiles", "preset") {
                 Text(
                     stringResource(R.string.settings_physical_input_description),
                     color = SettingsTextMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                Text(stringResource(R.string.settings_physical_profiles), style = MaterialTheme.typography.titleMedium)
+                PhysicalInputProfilesEditor(settings) { viewModel.updateSettings(it) }
                 if (state.androidTvProfile) {
                     SettingSwitch(
                         label = stringResource(R.string.settings_tv_controller_mouse_auto_arm),

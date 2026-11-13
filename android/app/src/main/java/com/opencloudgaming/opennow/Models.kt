@@ -734,6 +734,10 @@ data class AppSettings(
     val sessionClockShowDurationSeconds: Int = 30,
     val clipboardPaste: Boolean = true,
     val physicalInput: PhysicalInputSettings = PhysicalInputSettings(),
+    /** Named snapshots of [physicalInput]; see PhysicalInputProfiles.kt. */
+    val physicalInputProfiles: List<PhysicalInputProfile> = emptyList(),
+    /** The profile last applied or saved; [physicalInput] may since have been tuned away from it. */
+    val activePhysicalInputProfileId: String? = null,
     val androidTouch: AndroidTouchSettings = AndroidTouchSettings(),
     /** One-time upgrade from the old 0% touch-stick default; later explicit choices are retained. */
     val touchJoystickDefaultVersion: Int = 0,

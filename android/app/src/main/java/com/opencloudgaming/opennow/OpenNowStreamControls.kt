@@ -803,6 +803,7 @@ internal fun StreamControlsPanel(
     onTouchMouseSensitivityChange: (Float) -> Unit,
     onMouseScrollSensitivityChange: (Int) -> Unit,
     onPhysicalStickDeadZoneChange: (Float) -> Unit,
+    onPhysicalInputProfileSelect: (String) -> Unit = {},
     onTouchSettingsChange: (AndroidTouchSettings) -> Unit,
     onTouchPresetsChange: (List<TouchControlPreset>) -> Unit,
     onBugReportSubmit: (String, String, String?, AndroidBugReportDetails, List<AndroidBugReportAttachment>) -> Unit,
@@ -1187,6 +1188,28 @@ internal fun StreamControlsPanel(
                                 indentLevel = 1
                             )
                         }
+                    }
+                }
+            }
+            if (settings.physicalInputProfiles.isNotEmpty()) item {
+                ControlSection(stringResource(R.string.stream_panel_section_input_profile)) {
+                    val modified = settings.physicalInputProfileModified()
+                    settings.physicalInputProfiles.forEach { profile ->
+                        val active = profile.id == settings.activePhysicalInputProfileId
+                        ControlActionRow(
+                            label = profile.name,
+                            actionLabel = stringResource(R.string.settings_physical_profile_use),
+                            onClick = {
+                                onButtonTone()
+                                onPhysicalInputProfileSelect(profile.id)
+                            },
+                            value = if (active) {
+                                stringResource(
+                                    if (modified) R.string.settings_physical_profile_modified
+                                    else R.string.settings_physical_profile_active,
+                                )
+                            } else null,
+                        )
                     }
                 }
             }

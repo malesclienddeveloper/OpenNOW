@@ -1475,6 +1475,11 @@ internal fun StreamScreen(
                         client.updatePhysicalInputSettings(physicalInput)
                         viewModel.updateSettings(state.settings.copy(physicalInput = physicalInput))
                     },
+                    onPhysicalInputProfileSelect = { id ->
+                        val updated = state.settings.applyingPhysicalInputProfile(id)
+                        client.updatePhysicalInputSettings(updated.physicalInput)
+                        viewModel.updateSettings(updated)
+                    },
                     onTouchPresetsChange = { presets ->
                         viewModel.updateSettings(state.settings.copy(touchControlPresets = presets))
                     },
