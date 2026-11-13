@@ -738,6 +738,9 @@ data class AppSettings(
     val physicalInputProfiles: List<PhysicalInputProfile> = emptyList(),
     /** The profile last applied or saved; [physicalInput] may since have been tuned away from it. */
     val activePhysicalInputProfileId: String? = null,
+    /** Named snapshots of the on-screen keyboard layout; see KeyboardLayoutProfiles.kt. */
+    val keyboardLayoutProfiles: List<KeyboardLayoutProfile> = emptyList(),
+    val activeKeyboardLayoutProfileId: String? = null,
     val androidTouch: AndroidTouchSettings = AndroidTouchSettings(),
     /** One-time upgrade from the old 0% touch-stick default; later explicit choices are retained. */
     val touchJoystickDefaultVersion: Int = 0,

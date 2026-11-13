@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 internal const val MAX_PHYSICAL_INPUT_PROFILES = 20
-internal const val MAX_PHYSICAL_INPUT_PROFILE_NAME = 40
 
 /**
  * A named snapshot of [PhysicalInputSettings] (dead zones, sensitivity, inversion and swaps for the
@@ -19,13 +18,10 @@ data class PhysicalInputProfile(
     val settings: PhysicalInputSettings = PhysicalInputSettings(),
 )
 
-internal fun sanitizePhysicalInputProfileName(name: String): String =
-    name.filterNot(Char::isISOControl).trim().take(MAX_PHYSICAL_INPUT_PROFILE_NAME)
-
 internal fun List<PhysicalInputProfile>.normalizedPhysicalInputProfiles(): List<PhysicalInputProfile> =
     take(MAX_PHYSICAL_INPUT_PROFILES)
         .distinctBy { it.id }
-        .map { it.copy(name = sanitizePhysicalInputProfileName(it.name), settings = it.settings.normalized()) }
+        .map { it.copy(name = sanitizeProfileName(it.name), settings = it.settings.normalized()) }
         .filter { it.id.isNotBlank() && it.name.isNotBlank() }
 
 internal fun AppSettings.activePhysicalInputProfile(): PhysicalInputProfile? =
@@ -40,7 +36,7 @@ internal fun AppSettings.canSavePhysicalInputProfile(): Boolean =
 
 /** Saves the live settings as a new profile and makes it active; null when the name is blank or the list is full. */
 internal fun AppSettings.savingPhysicalInputProfile(name: String): AppSettings? {
-    val cleaned = sanitizePhysicalInputProfileName(name)
+    val cleaned = sanitizeProfileName(name)
     if (cleaned.isBlank() || !canSavePhysicalInputProfile()) return null
     val profile = PhysicalInputProfile(UUID.randomUUID().toString(), cleaned, physicalInput.normalized())
     return copy(physicalInputProfiles = physicalInputProfiles + profile, activePhysicalInputProfileId = profile.id)
@@ -53,7 +49,7 @@ internal fun AppSettings.applyingPhysicalInputProfile(id: String): AppSettings {
 }
 
 internal fun AppSettings.renamingPhysicalInputProfile(id: String, name: String): AppSettings {
-    val cleaned = sanitizePhysicalInputProfileName(name)
+    val cleaned = sanitizeProfileName(name)
     if (cleaned.isBlank()) return this
     return copy(physicalInputProfiles = physicalInputProfiles.map { if (it.id == id) it.copy(name = cleaned) else it })
 }

@@ -804,6 +804,7 @@ internal fun StreamControlsPanel(
     onMouseScrollSensitivityChange: (Int) -> Unit,
     onPhysicalStickDeadZoneChange: (Float) -> Unit,
     onPhysicalInputProfileSelect: (String) -> Unit = {},
+    onAppSettingsChange: (AppSettings) -> Unit = {},
     onTouchSettingsChange: (AndroidTouchSettings) -> Unit,
     onTouchPresetsChange: (List<TouchControlPreset>) -> Unit,
     onBugReportSubmit: (String, String, String?, AndroidBugReportDetails, List<AndroidBugReportAttachment>) -> Unit,
@@ -888,6 +889,7 @@ internal fun StreamControlsPanel(
                 onChange = onTouchSettingsChange,
                 onPresetsChange = onTouchPresetsChange,
                 onBack = { page = StreamControlsPage.Main },
+                keyboardLayoutProfiles = { KeyboardLayoutProfilesEditor(settings, onAppSettingsChange) },
                 livePreview = true,
                 controlsVisible = touchControlsVisible,
                 onVisibilityChange = { onButtonTone(); onTouchControlsToggle() },
@@ -1192,26 +1194,22 @@ internal fun StreamControlsPanel(
                 }
             }
             if (settings.physicalInputProfiles.isNotEmpty()) item {
-                ControlSection(stringResource(R.string.stream_panel_section_input_profile)) {
-                    val modified = settings.physicalInputProfileModified()
-                    settings.physicalInputProfiles.forEach { profile ->
-                        val active = profile.id == settings.activePhysicalInputProfileId
-                        ControlActionRow(
-                            label = profile.name,
-                            actionLabel = stringResource(R.string.settings_physical_profile_use),
-                            onClick = {
-                                onButtonTone()
-                                onPhysicalInputProfileSelect(profile.id)
-                            },
-                            value = if (active) {
-                                stringResource(
-                                    if (modified) R.string.settings_physical_profile_modified
-                                    else R.string.settings_physical_profile_active,
-                                )
-                            } else null,
-                        )
-                    }
-                }
+                NamedProfileQuickSwitch(
+                    title = stringResource(R.string.stream_panel_section_input_profile),
+                    profiles = settings.physicalInputProfiles.map { NamedProfile(it.id, it.name) },
+                    activeId = settings.activePhysicalInputProfileId,
+                    modified = settings.physicalInputProfileModified(),
+                    onSelect = { onButtonTone(); onPhysicalInputProfileSelect(it) },
+                )
+            }
+            if (settings.keyboardLayoutProfiles.isNotEmpty()) item {
+                NamedProfileQuickSwitch(
+                    title = stringResource(R.string.stream_panel_section_keyboard_layout),
+                    profiles = settings.keyboardLayoutProfiles.map { NamedProfile(it.id, it.name) },
+                    activeId = settings.activeKeyboardLayoutProfileId,
+                    modified = settings.keyboardLayoutProfileModified(),
+                    onSelect = { onButtonTone(); onAppSettingsChange(settings.applyingKeyboardLayoutProfile(it)) },
+                )
             }
             if (advancedControlsVisible || microphoneRequested) item {
                 ControlSection(stringResource(R.string.stream_panel_section_input)) {

@@ -339,6 +339,7 @@ internal fun AppSettings.normalizedForAndroid(): AppSettings {
     } else {
         normalizedCatalogSortId
     }
+    val normalizedKeyboardLayoutProfiles = keyboardLayoutProfiles.normalizedKeyboardLayoutProfiles()
     return copy(
         recordingDirectoryUri = recordingDirectoryUri?.takeIf { it.isNotBlank() },
         uiAccent = if (uiAccent == UiAccent.LegacyOrange) UiAccent.Violet else uiAccent,
@@ -362,6 +363,9 @@ internal fun AppSettings.normalizedForAndroid(): AppSettings {
         physicalInputProfiles = normalizedPhysicalInputProfiles,
         activePhysicalInputProfileId = activePhysicalInputProfileId
             ?.takeIf { id -> normalizedPhysicalInputProfiles.any { it.id == id } },
+        keyboardLayoutProfiles = normalizedKeyboardLayoutProfiles,
+        activeKeyboardLayoutProfileId = activeKeyboardLayoutProfileId
+            ?.takeIf { id -> normalizedKeyboardLayoutProfiles.any { it.id == id } },
         touchControlPresets = touchControlPresets.take(MAX_TOUCH_PRESETS)
             .distinctBy { it.id }
             .map {

@@ -66,6 +66,7 @@ internal fun OnScreenControlsSettings(
     onEditLayout: (() -> Unit)? = null,
     headerActions: @Composable RowScope.() -> Unit = {},
     additionalSettings: @Composable () -> Unit = {},
+    keyboardLayoutProfiles: (@Composable () -> Unit)? = null,
     notice: @Composable () -> Unit = {},
 ) {
     val rowStyle = controlRowStyle()
@@ -207,6 +208,9 @@ internal fun OnScreenControlsSettings(
                                         value = stringResource(R.string.controls_edit_button_hint),
                                         onClick = { editingButtonId = button.id },
                                     )
+                                }
+                                if (keyboardLayoutProfiles != null) item {
+                                    ControlSection(stringResource(R.string.settings_keyboard_layouts)) { keyboardLayoutProfiles() }
                                 }
                             }
                             TouchSettingsPage.Gamepad -> {

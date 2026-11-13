@@ -1480,6 +1480,7 @@ internal fun StreamScreen(
                         client.updatePhysicalInputSettings(updated.physicalInput)
                         viewModel.updateSettings(updated)
                     },
+                    onAppSettingsChange = { viewModel.updateSettings(it) },
                     onTouchPresetsChange = { presets ->
                         viewModel.updateSettings(state.settings.copy(touchControlPresets = presets))
                     },

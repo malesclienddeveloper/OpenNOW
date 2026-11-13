@@ -442,6 +442,9 @@ internal fun SettingsScreen(
                 onChange = { viewModel.updateSettings(state.settings.copy(androidTouch = it)) },
                 onPresetsChange = { viewModel.updateSettings(state.settings.copy(touchControlPresets = it)) },
                 onBack = { selectedCategory = null },
+                keyboardLayoutProfiles = {
+                    KeyboardLayoutProfilesEditor(state.settings) { viewModel.updateSettings(it) }
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (spacePresentation) {

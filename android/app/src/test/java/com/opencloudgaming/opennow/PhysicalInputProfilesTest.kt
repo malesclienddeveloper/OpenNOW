@@ -63,7 +63,7 @@ class PhysicalInputProfilesTest {
         assertEquals("New name", saved.renamingPhysicalInputProfile(id, " New\u0000 name ").physicalInputProfiles.single().name)
         assertEquals("Old", saved.renamingPhysicalInputProfile(id, "   ").physicalInputProfiles.single().name)
         assertEquals(
-            MAX_PHYSICAL_INPUT_PROFILE_NAME,
+            MAX_PROFILE_NAME_LENGTH,
             saved.renamingPhysicalInputProfile(id, "x".repeat(200)).physicalInputProfiles.single().name.length,
         )
     }
