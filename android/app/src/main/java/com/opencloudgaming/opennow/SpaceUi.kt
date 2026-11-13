@@ -9,11 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,7 +28,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,6 +55,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
@@ -125,6 +122,9 @@ internal fun SpaceUiScreen(
     var searchOpen by rememberSaveable(state.page) { mutableStateOf(false) }
     val query = if (state.page == AppPage.Library) state.librarySearch else state.catalogSearch
     val listState = rememberLazyListState()
+    // Library keeps its own rail position so switching tabs does not move the Discover rail.
+    val libraryListState = rememberLazyListState()
+    val railState = if (state.page == AppPage.Library) libraryListState else listState
     val discoveryScroll = rememberScrollState()
     var discoverCatalog by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = inputEnabled && state.page == AppPage.Home && discoverCatalog) { discoverCatalog = false }
@@ -158,12 +158,20 @@ internal fun SpaceUiScreen(
                 requestFocusWithRetry(searchRequester, initialDelayMs = 0L)
             } else if (games.isNotEmpty() && state.page != AppPage.Settings) {
                 val index = games.indexOfFirst { it.id == game?.id }.coerceAtLeast(0)
-                if (state.page == AppPage.Library || discoverCatalog) {
-                    gridState.scrollToItem(index + if (portraitLayout && state.page == AppPage.Library) 1 else 0)
+                if (state.page == AppPage.Library) {
+                    // Landscape Library is a rail like Discover; portrait keeps its grid. The two layout checks can
+                    // disagree in a narrow window, so wait for whichever of them is actually on screen.
+                    if (portraitLayout) gridState.scrollToItem(index + 1) else railState.scrollToItem(index)
+                    snapshotFlow {
+                        railState.layoutInfo.visibleItemsInfo.any { it.key == game?.id } ||
+                            gridState.layoutInfo.visibleItemsInfo.any { it.key == game?.id }
+                    }.first { it }
+                } else if (discoverCatalog) {
+                    gridState.scrollToItem(index)
                     snapshotFlow { gridState.layoutInfo.visibleItemsInfo.any { it.key == game?.id } }.first { it }
                 } else {
-                    listState.scrollToItem(index)
-                    snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key == game?.id } }.first { it }
+                    railState.scrollToItem(index)
+                    snapshotFlow { railState.layoutInfo.visibleItemsInfo.any { it.key == game?.id } }.first { it }
                 }
                 requestFocusWithRetry(selectedRequester, initialDelayMs = 0L)
             } else {
@@ -176,8 +184,12 @@ internal fun SpaceUiScreen(
             requestFocusWithRetry(searchRequester)
         }
     }
-    val fastNavigation = rememberSpaceFastNavigation(listState, game?.id,
-        enabled = inputEnabled && state.page == AppPage.Home && !discoverCatalog && !reduceMotion)
+    val fastNavigation = rememberSpaceFastNavigation(railState, game?.id,
+        enabled = inputEnabled && !reduceMotion && when (state.page) {
+            AppPage.Home -> !discoverCatalog
+            AppPage.Library -> !portraitLayout
+            else -> false
+        })
     CompositionLocalProvider(LocalSpaceFastNavigation provides fastNavigation) {
     BoxWithConstraints(
         Modifier.fillMaxSize().testTag("space-ui").spaceSafeViewport()
@@ -242,19 +254,7 @@ internal fun SpaceUiScreen(
                     }, onSelectGame = onSelectGame, onRefresh = onRefresh,
                     catalogControls = catalogControls, libraryContent = libraryContent,
                     onResumeSession = onResumeSession)
-            } else if (state.page == AppPage.Library) {
-                if (searchVisible) {
-                    NativeSearchField(query, onSearchChange, stringResource(R.string.nav_search),
-                        focusRequester = searchRequester, gamepadImeMode = true,
-                        modifier = Modifier.padding(top = 10.dp).fillMaxWidth())
-                }
-                Box(Modifier.weight(1f).spaceArrival(state.page)) {
-                    SpaceLibraryBody(state, games, game, gridState, selectedRequester,
-                        compact = compact, portrait = portrait,
-                        onFocused = { librarySelectedId = it }, onSelectGame = onSelectGame,
-                        onRefresh = onRefresh, catalogControls = catalogControls, libraryContent = libraryContent)
-                }
-            } else if (discoverCatalog) {
+            } else if (discoverCatalog && state.page != AppPage.Library) {
                 if (searchVisible) NativeSearchField(query, onSearchChange, stringResource(R.string.nav_search),
                     searching = state.loadingGames, focusRequester = searchRequester, gamepadImeMode = family != null,
                     modifier = Modifier.padding(top = 10.dp).fillMaxWidth())
@@ -262,6 +262,8 @@ internal fun SpaceUiScreen(
                     Modifier.weight(1f), onFocused = { storeSelectedId = it }, onSelectGame = onSelectGame,
                     onBack = { discoverCatalog = false }, catalogControls = catalogControls)
             } else {
+                // Library reuses the Discover layout: same hero and rail, minus the description and catalog entry.
+                val libraryPage = state.page == AppPage.Library
                 if (searchVisible) {
                     NativeSearchField(query = query, onQueryChange = onSearchChange,
                         placeholder = stringResource(R.string.nav_search), searching = state.loadingGames,
@@ -272,8 +274,12 @@ internal fun SpaceUiScreen(
                     Text(error, color = Color(0xFFFFB5A9), fontSize = 12.sp, maxLines = 2,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                 }
+                // Outside the measured box below, so the hero/rail height budget already accounts for it.
+                if (libraryPage) Text(stringResource(R.string.space_ui_collection), color = SpaceIce, fontSize = 11.sp,
+                    letterSpacing = 3.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth().padding(top = if (compact) 2.dp else 8.dp).testTag("space-library-title"))
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()
-                    .expandSpaceCatalogOnSwipe(inputEnabled && games.isNotEmpty()) { discoverCatalog = true }) {
+                    .expandSpaceCatalogOnSwipe(inputEnabled && games.isNotEmpty() && !libraryPage) { discoverCatalog = true }) {
                     // Budget the full rail, its focus gutters and a touch-sized catalog action first.
                     val railArtworkSize = if (portraitRail) (maxHeight * .32f).coerceIn(86.dp, 164.dp)
                         else if (compact) (maxHeight * .30f).coerceIn(72.dp, 98.dp) else 134.dp
@@ -282,12 +288,14 @@ internal fun SpaceUiScreen(
                     val showHeroDescription = maxHeight >= 340.dp
                     val showCatalogPosition = maxWidth >= 480.dp
                     Column(Modifier.fillMaxSize().testTag("space-discover-scroll")
-                        .spaceArrival("discover-rail").verticalScroll(discoveryScroll).padding(bottom = 16.dp)) {
+                        .spaceArrival(if (libraryPage) "library-rail" else "discover-rail")
+                        .verticalScroll(discoveryScroll).padding(bottom = 16.dp)) {
                         Column(Modifier.heightIn(min = if (showHero || games.isEmpty()) heroHeight else 0.dp)
                             .padding(top = if (!showHero) 0.dp else if (compact) 14.dp else if (portrait) 20.dp else 32.dp)) {
-                            if (state.activeSession != null) SpaceControl(stringResource(R.string.action_resume), onClick = onResumeSession)
+                            if (state.activeSession != null && !libraryPage) SpaceControl(stringResource(R.string.action_resume), onClick = onResumeSession)
                             if (game != null) {
-                                if (showHero) SpaceDiscoveryHero(game, compact, portrait, showDescription = showHeroDescription)
+                                if (showHero) SpaceDiscoveryHero(game, compact, portrait,
+                                    showDescription = showHeroDescription && !libraryPage)
                             }
                             else if (state.loadingGames) CircularProgressIndicator(color = SpaceIce, modifier = Modifier.size(28.dp))
                             else {
@@ -297,7 +305,9 @@ internal fun SpaceUiScreen(
                             }
                         }
                         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                if (games.isNotEmpty()) {
+                                if (libraryPage) {
+                                    Text(stringResource(R.string.library_count, games.size), color = SpaceMuted, fontSize = 12.sp)
+                                } else if (games.isNotEmpty()) {
                                     val browseLabel = stringResource(R.string.space_ui_browse_all)
                                     SpaceControl(browseLabel, modifier = Modifier.testTag("space-browse-all"), minHeight = 48.dp,
                                         enabled = inputEnabled, onClick = { discoverCatalog = true }) {
@@ -312,9 +322,10 @@ internal fun SpaceUiScreen(
                                 catalogControls()
                         }
                         if (games.isNotEmpty()) {
-                            LazyRow(state = listState, modifier = Modifier.fillMaxWidth().focusGroup().testTag("space-game-rail")
+                            LazyRow(state = railState, modifier = Modifier.fillMaxWidth().focusGroup()
+                                .testTag(if (libraryPage) "space-library-grid" else "space-game-rail")
                                 .onPreviewKeyEvent { event ->
-                                    if (inputEnabled && event.key == Key.DirectionDown) {
+                                    if (!libraryPage && inputEnabled && event.key == Key.DirectionDown) {
                                         if (event.type == KeyEventType.KeyDown) discoverCatalog = true
                                         true
                                     } else false
@@ -334,6 +345,7 @@ internal fun SpaceUiScreen(
                                 }
                             }
                         }
+                        if (libraryPage) Box(Modifier.padding(top = 12.dp)) { libraryContent() }
                     }
                 }
             }
@@ -392,70 +404,6 @@ private fun SpaceDiscoveryHero(game: GameInfo, compact: Boolean, portrait: Boole
     }
     Column(Modifier.fillMaxWidth(if (portrait) 1f else .72f).spaceArrival(game.id)) { title() }
 
-}
-
-@Composable
-private fun SpaceLibraryBody(
-    state: OpenNowUiState,
-    games: List<GameInfo>,
-    selectedGame: GameInfo?,
-    gridState: LazyGridState,
-    selectedRequester: FocusRequester,
-    compact: Boolean,
-    portrait: Boolean,
-    onFocused: (String) -> Unit,
-    onSelectGame: (GameInfo) -> Unit,
-    onRefresh: () -> Unit,
-    catalogControls: @Composable () -> Unit,
-    libraryContent: @Composable () -> Unit,
-) {
-    val reduceMotion = LocalReduceForegroundMotion.current
-    val overview: @Composable () -> Unit = {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(end = if (portrait) 0.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 20.dp)) {
-            Text(stringResource(R.string.space_ui_collection), color = SpaceIce, fontSize = 11.sp, letterSpacing = 3.sp)
-            Text(selectedGame?.title ?: stringResource(R.string.nav_library), color = SpaceWhite,
-                fontWeight = FontWeight.Light, fontSize = if (portrait || compact) 26.sp else 40.sp,
-                lineHeight = if (portrait || compact) 32.sp else 46.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            if (!portrait && !compact) selectedGame?.let(::gameDescriptionForDetails)?.let { description ->
-                Text(description, color = SpaceMuted, fontSize = 14.sp, lineHeight = 23.sp,
-                    maxLines = 4, overflow = TextOverflow.Ellipsis)
-            }
-            libraryContent()
-        }
-    }
-    val collection: @Composable () -> Unit = {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.library_count, games.size), color = SpaceMuted, fontSize = 12.sp)
-                Spacer(Modifier.weight(1f))
-                catalogControls()
-            }
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-            if (games.isEmpty()) {
-                Text(stringResource(R.string.no_games_loaded), color = SpaceWhite, fontSize = 20.sp)
-                Text(stringResource(R.string.space_ui_empty), color = SpaceMuted, fontSize = 13.sp)
-                SpaceControl(stringResource(R.string.space_ui_refresh), onClick = onRefresh)
-            } else LazyVerticalGrid(columns = GridCells.Fixed(4), state = gridState,
-                contentPadding = PaddingValues(6.dp), verticalArrangement = Arrangement.spacedBy(0.dp),
-                horizontalArrangement = Arrangement.spacedBy(0.dp), modifier = Modifier.weight(1f).testTag("space-library-grid")) {
-                gridItemsIndexed(games, key = { _, game -> game.id }) { _, game ->
-                    SpaceGameTile(game, selectedGame?.id == game.id, compact, reduceMotion,
-                        showPremiumMarker = state.settings.showPremiumMarker,
-                        modifier = Modifier.fillMaxWidth().then(
-                            if (selectedGame?.id == game.id) Modifier.focusRequester(selectedRequester) else Modifier),
-                        onFocused = { onFocused(game.id) }, onClick = { onSelectGame(game) }, fillWidth = true)
-                }
-            }
-        }
-    }
-    if (portrait) Column(Modifier.fillMaxSize().padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        overview()
-        Box(Modifier.weight(1f)) { collection() }
-    } else Row(Modifier.fillMaxSize().padding(top = if (compact) 16.dp else 40.dp)) {
-        Box(Modifier.weight(.34f)) { overview() }
-        Box(Modifier.weight(.66f)) { collection() }
-    }
 }
 
 @Composable

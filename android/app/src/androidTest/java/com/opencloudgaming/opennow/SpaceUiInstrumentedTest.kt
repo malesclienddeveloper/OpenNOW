@@ -194,12 +194,19 @@ class SpaceUiInstrumentedTest {
         focusFirstGame()
         val first = compose.onNodeWithTag("space-game-art-1", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val second = compose.onNodeWithTag("space-game-art-2", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val fourth = compose.onNodeWithTag("space-game-art-4", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val fifth = compose.onNodeWithTag("space-game-art-5", useUnmergedTree = true).getUnclippedBoundsInRoot()
         assertEquals("Library keeps the square Discover artwork", (first.right - first.left).value, (first.bottom - first.top).value, 1f)
-        if (isPortrait()) assertTrue("Phone library cards need room for readable artwork", fourth.top > first.top)
-        else assertEquals(first.top.value, fourth.top.value, 1f)
-        assertTrue("The fifth game starts the next row", fifth.top > first.top)
+        if (isPortrait()) {
+            val fourth = compose.onNodeWithTag("space-game-art-4", useUnmergedTree = true).getUnclippedBoundsInRoot()
+            val fifth = compose.onNodeWithTag("space-game-art-5", useUnmergedTree = true).getUnclippedBoundsInRoot()
+            assertTrue("Phone library cards need room for readable artwork", fourth.top > first.top)
+            assertTrue("The fifth game starts the next row", fifth.top > first.top)
+        } else {
+            // Landscape mirrors Discover: one rail, a small centered collection label, no description.
+            assertEquals("Library cards share one rail row", first.top.value, second.top.value, 1f)
+            compose.onNodeWithTag("space-library-title").assertIsDisplayed()
+            compose.onNodeWithTag("space-discover-details").assertDoesNotExist()
+            compose.onNodeWithTag("space-browse-all").assertDoesNotExist()
+        }
         assertEquals("Only the focus gutters separate adjacent cards", 24f, (second.left - first.right).value, 1f)
         val target = compose.onNodeWithTag("space-game-1").getUnclippedBoundsInRoot()
         assertEquals("Artwork fills its grid cell inside the focus gutters", (target.right - target.left).value - 24f,
