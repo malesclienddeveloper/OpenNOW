@@ -68,6 +68,9 @@ jobs:
 
       - name: Build APK
         working-directory: android
+        env:
+          # CMake 4.x menolak cmake_minimum_required lama milik Opus (audiopus_sys)
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: |
           chmod +x ./gradlew
           if [ "${{ inputs.variant }}" = "release" ]; then
