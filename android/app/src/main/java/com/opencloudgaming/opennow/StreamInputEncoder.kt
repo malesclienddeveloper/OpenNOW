@@ -664,11 +664,14 @@ internal const val MICROPHONE_TRACK_ID = "mic"
 internal const val DEFAULT_INPUT_PROTOCOL_VERSION = 2
 internal const val INPUT_HANDSHAKE_MARKER = 0x0e
 internal const val INPUT_HANDSHAKE_MAGIC_WORD = 526
-internal const val ICE_DISCONNECTED_GRACE_MS = 3500L
+// WebRTC reports DISCONNECTED during short radio or ping spikes and often recovers on its own. The
+// reconnect only fires if the state is still DISCONNECTED after this grace, so a longer wait avoids
+// tearing down a transport that is about to heal.
+internal const val ICE_DISCONNECTED_GRACE_MS = 8000L
 internal const val ICE_FAILED_RECONNECT_DELAY_MS = 250L
 internal const val SIGNALING_RECONNECT_DELAY_MS = 1000L
 private const val ANDROID_CODEC_RESTART_SETTLE_MS = 180L
-internal const val MAX_TRANSPORT_RECONNECT_ATTEMPTS = 3
+internal const val MAX_TRANSPORT_RECONNECT_ATTEMPTS = 5
 internal const val MAX_TRANSIENT_SIGNALING_RETRIES = 3
 internal const val OFFER_TIMEOUT_MS = 12_000L
 internal const val MEDIA_STALL_KEYFRAME_AFTER_MS = 5_000L
