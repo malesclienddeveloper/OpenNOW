@@ -132,7 +132,7 @@ class OpenNowApplication : Application(), SingletonImageLoader.Factory {
 
     private companion object {
         const val TV_BACKGROUND_SERVICE_START_DELAY_MS = 2_500L
-        const val IMAGE_MEMORY_CACHE_FRACTION = 0.25
+        const val IMAGE_MEMORY_CACHE_FRACTION = 0.15
         const val IMAGE_DISK_CACHE_DIR = "image_cache"
         const val IMAGE_DISK_CACHE_BYTES = 256L * 1024 * 1024
         const val IMAGE_FETCH_PARALLELISM = 4

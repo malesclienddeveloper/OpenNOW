@@ -194,6 +194,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.SingletonImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -4889,6 +4890,9 @@ private fun FullscreenScreenshotViewer(
                 imageLoader.execute(
                     ImageRequest.Builder(context)
                         .data(optimizedNvidiaImageUrl(screenshots[adjacentIndex], requestWidth))
+                        // Warm only the disk cache: this request has no target size, so a decoded
+                        // copy would be full-size and never match the displayed request's cache key.
+                        .memoryCachePolicy(CachePolicy.DISABLED)
                         .build(),
                 )
             }
